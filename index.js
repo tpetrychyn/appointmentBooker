@@ -6,6 +6,7 @@ app.use(express.static(__dirname + '/public'));
 
 app.get('/', function(request, response) {
   response.send('Appointment at 1:00pm - Taylor');
+  response.send('Appointment at 2:00pm - Taylor');
 });
 
 app.listen(app.get('port'), function() {
