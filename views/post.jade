@@ -1,0 +1,22 @@
+extends layout
+
+block content
+	h1= post.appDateTime
+
+	div.comments
+		p Comments
+		= post.comments
+
+	form(method="post", action="/book")
+		p
+			t Name:
+			input(type="text", name="user_name", placeholder="Enter your name")
+		p
+			t Phone Number:
+			input(type="text", name="phone_number", placeholder="Enter your #")
+		p
+			t Email Address:
+			input(type="text", size="40", name="email_address", placeholder="Enter your email address")
+		p
+			input(type="submit", value="Book this Appointment")
+			input(type="hidden", value="#{post.slug}" name="pass_slug")

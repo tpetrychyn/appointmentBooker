@@ -1,0 +1,13 @@
+html
+	head
+		title #{title}
+		link(rel='stylesheet', href='/css/bootstrap.min.css')
+	body
+		if user
+			p
+				img(src="#{user.picture}" height="60px") 
+				t &nbsp #{user.name} &nbsp
+				a(href="/logout") Logout
+		else
+			a(href="/auth/facebook") Login with Facebook
+		block content

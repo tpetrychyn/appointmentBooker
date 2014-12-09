@@ -1,0 +1,16 @@
+extends layout
+
+head
+	link(rel='stylesheet', href='/css/index.css')
+
+block content
+	div#containter
+		h1= title
+		p Welcome to Taylor's fun app
+		
+
+		h3 Available bookings
+		each post in posts
+			a(href="/#{post.slug}") #{post.appDateTime}
+			h5= post.comments
+			<hr>

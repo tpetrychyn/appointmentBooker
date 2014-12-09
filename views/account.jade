@@ -1,0 +1,15 @@
+extends layout
+
+block content
+	h1 #{user.name} Settings
+
+	form(method="post", action="/account")
+		p
+			t Phone Number: 
+			input(type="text", name="phone_number", placeholder="Enter your phone number")
+		p
+			t Email Address: 
+			input(type="text", size="40", name="email_address", placeholder="Enter your email address")
+		p
+			input(type="submit", value="Update Account")
+			input(type="hidden", value="#{user.facebookId}" name="pass_id")

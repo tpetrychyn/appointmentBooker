@@ -1,0 +1,18 @@
+extends layout
+
+block content
+	each app in bookings
+		h2= app.appDateTime
+		h3= app.name
+		h4= app.phone_number
+		h4= app.email_address
+		h4= app.comments
+
+		form(method="post", action="/cancel")
+			p
+				t Make Reavailable
+				input(type="checkbox", name="keep_box")
+			p
+				input(type="submit", value="Cancel this booking")
+				input(type="hidden", value="#{app.slug}" name="pass_slug")
+		<hr>

@@ -1,0 +1,25 @@
+extends layout
+
+block content
+	form(method="post", action="/new")
+		p
+			input(type="text", name="app_date", placeholder"Enter the post title")
+		p
+			textarea(rows="10", cols="60", name="comments")
+		p
+			input(type="submit", value="Create")
+
+
+			//
+				extends layout
+
+				block content
+					form(method="post", action="/new")
+						p
+							input(type="text", name="post_title", placeholder"Enter the post title")
+						p
+							input(type="text", name="post_slug", placeholder"Enter the slug you want")
+						p
+							textarea(rows="18", cols="60", name="post_body")
+						p
+							input(type="submit", text="Submit")
