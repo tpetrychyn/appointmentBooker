@@ -12,7 +12,12 @@ var Post = require('./models/post');
 var Book = require('./models/bookings');
 var User = require('./models/users');
 var mongoose = require('mongoose');
+//heroku db
 var dbURL = 'mongodb://taylorp:taytay@ds061370.mongolab.com:61370/heroku_app32339500';
+
+//local db
+//var dbURL = 'mongodb://localhost/appointmentsdb';
+
 
 mongoose.connect(dbURL);
 
@@ -88,7 +93,7 @@ app.set('port', (process.env.PORT || 5000));
 app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(session({ secret: 'generate a random secret eventually' }));
+app.use(session({ secret: 'generate a random secret eventually', saveUninitialized: true, resave: true }));
 //Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
@@ -101,6 +106,12 @@ app.get('/', function(req, res) {
 		posts: posts,
 		user: req.user
 		});
+	});
+});
+
+app.get('/listposts', function(req, res) {
+	Post.find().sort({'appDate': 1}).exec(function(err, posts) {
+		res.send(posts);
 	});
 });
 
