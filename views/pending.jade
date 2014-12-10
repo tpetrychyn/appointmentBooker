@@ -1,0 +1,24 @@
+extends layout
+
+block content
+    if (pending== 0)
+        h2 There are currently no pending appointments
+    each pend in pending
+        h2= pend.appDate
+        h2= pend.appTime
+        h3= pend.name
+        h4= pend.phone_number
+        h4= pend.email_address
+        h4= pend.comments
+
+        form(method="post", action="/approve")
+            p
+                input(type="submit", value="Confirm this appointment")
+                input(type="hidden", value="#{pend.slug}" name="pass_slug")
+
+        form(method="post", action="/cancelpending")
+            p
+                input(type="submit", value="Cancel this appointment")
+                input(type="hidden", value="#{pend.slug}" name="pass_slug")
+                input(type="hidden", name="keep_box" value="true")
+        <hr>

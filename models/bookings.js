@@ -18,11 +18,11 @@ var bookingSchema = Schema({
 		type: String,
 		required: true
 	},
-	phone_number: {
+	phoneNumber: {
 		type: String,
 		required: true
 	},
-	email_address: {
+	email: {
 		type: String
 	},
 	comments: {

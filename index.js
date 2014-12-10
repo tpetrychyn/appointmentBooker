@@ -11,12 +11,13 @@ var express = require('express')
 var Post = require('./models/post');
 var Book = require('./models/bookings');
 var User = require('./models/users');
+var Pending = require('./models/pending');
 var mongoose = require('mongoose');
 //heroku db
-var dbURL = 'mongodb://taylorp:taytay@ds061370.mongolab.com:61370/heroku_app32339500';
+//var dbURL = 'mongodb://taylorp:taytay@ds061370.mongolab.com:61370/heroku_app32339500';
 
 //local db
-//var dbURL = 'mongodb://localhost/appointmentsdb';
+var dbURL = 'mongodb://localhost/appointmentsdb';
 
 
 mongoose.connect(dbURL);
@@ -149,8 +150,8 @@ app.get('/account', function(req, res){
 		return;
 	}
 	User.findOne( { facebookId: req.user.facebookId }, function(err, user) {
-		if (err) {
-			console.log(err);
+		if (err) console.log(err);
+		if (!user) {
 			res.redirect('/');
 			return;
 		}
@@ -215,13 +216,54 @@ app.get('/bookings', function(req, res) {
 });
 
 app.get('/new', function(req, res) {
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
+	if (!req.user.group == 'admin') {
+		res.redirect('/');
+		return;
+	}
 	res.render('new', {
 		title: 'Add Appointment Time',
 		user: req.user
 	});
 });
 
+app.get('/new/:error', function(req, res) {
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
+	if (!req.user.group == 'admin') {
+		res.redirect('/');
+		return;
+	}
+	res.render('new', {
+		error: req.params.error,
+		title: 'Add Appointment Time',
+		user: req.user
+	});
+});
+
 app.post('/new', function(req, res) {
+	backURL=req.header('Referer') || '/';
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
+	if (!req.user.group == 'admin') {
+		res.redirect('/');
+		return;
+	}
+	if (req.body.app_date == '') {
+		res.redirect('/new/date');
+		return;
+	}
+	if (req.body.app_time == '') {
+		res.redirect('/new/time');
+		return;
+	}
 	var newSlug = new Date().getTime();
 	var post = new Post({
 		appDate: req.body.app_date,
@@ -232,17 +274,20 @@ app.post('/new', function(req, res) {
 
 	post.save(function(err) {
 		if (err) console.log(err);
-		else res.redirect('/');
+		else res.redirect('new/success');
 	});
 });
 
 app.post('/cancel', function(req, res) {
+	backURL=req.header('Referer') || '/';
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
 	var newSlug = new Date().getTime();
 	if (req.body.keep_box) {
 		Book.findOne({ slug: req.body.pass_slug }, function(err, booking) {
-			if (err) console.log(err);
 			if (!booking) {
-				res.redirect('/oops');
 				return;
 			}
 			var post = new Post({
@@ -259,12 +304,38 @@ app.post('/cancel', function(req, res) {
 	}
 	Book.remove({ slug: req.body.pass_slug }, function(err, booking) {
 		if (err) console.log(err);
-		if (!booking) {
-			res.redirect('/oops');
-			return;
-		}
+		else res.redirect(backURL);
 	});
-	res.redirect('/');
+});
+
+app.post('/cancelpending', function(req, res) {
+	backURL=req.header('Referer') || '/';
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
+	var newSlug = new Date().getTime();
+	if (req.body.keep_box) {
+		Pending.findOne({ slug: req.body.pass_slug }, function(err, pending) {
+			if (!pending) {
+				return;
+			}
+			var post = new Post({
+				appDate: pending.appDate,
+				appTime: pending.appTime,
+				comments: pending.comments,
+				slug: newSlug
+			});
+
+			post.save(function(err) {
+				if (err) console.log(err);
+			});
+		});
+	}
+	Pending.remove({ slug: req.body.pass_slug }, function(err, pending) {
+		if (err) console.log(err);
+		else res.redirect(backURL);
+	});
 });
 
 app.get('/oops', function(req, res) {
@@ -272,10 +343,16 @@ app.get('/oops', function(req, res) {
 });
 
 app.post('/book', function(req, res) {
+	/*User.findOne({ facebookId: req.body.pass_id}, function(err,user) {
+		Pending.find({ facebookId: user.facebookId }, function(err, pending) {
+			if (err) console.log(err);
+			console.log(bookings.count);
+		});
+	});*/
 	var newSlug = new Date().getTime();
 	Post.findOne({ slug: req.body.pass_slug }, function(err, post) {
 		if (!post) {
-			res.redirect('/oops');
+			res.redirect('/');
 			return;
 		}
 		if (!validateEmail(req.body.email_address)) {
@@ -286,20 +363,30 @@ app.post('/book', function(req, res) {
 			res.redirect('/oops');
 			return;
 		}
-		var booking = new Book({
+		var pending = new Pending({
 			appDate: post.appDate,
 			appTime: post.appTime,
 			name: req.body.user_name,
 			facebookId: req.body.pass_id,
-			email_address: req.body.email_address,
-			phone_number: req.body.phone_number,
+			email: req.body.email_address,
+			phoneNumber: req.body.phone_number,
 			comments: post.comments,
 			slug: newSlug,
 		});
 
-		booking.save(function(err) {
+		pending.save(function(err) {
 			if (err) console.log(err);
-			else res.redirect('/');
+			else {
+				res.render('booksuccess', {
+					appDate: post.appDate,
+					appTime: post.appTime,
+					name: req.body.user_name,
+					email: req.body.email_address,
+					phoneNumber: req.body.phone_number,
+					comments: post.comments,
+					user: req.user
+				});
+			}
 		});
 
 		Post.remove({ slug: req.body.pass_slug }, function(err, post) {
@@ -308,16 +395,82 @@ app.post('/book', function(req, res) {
 	});
 });
 
-app.get('/:slug', function(req, res) {
+app.get('/posts/:slug', function(req, res) {
+	//find the post corresponding to slug
 	Post.findOne({ slug: req.params.slug }, function(err, post) {
-		if (!post) {
+		if (!post) { //if none found link was bad
 			res.redirect('/oops');
 			return;
 		}
-		if(err) console.log(err);
-		else res.render('post', {
-			post: post,
+		if (!req.user) { //if no user is logged in render without a user
+			res.render('post', {
+				post: post
+			});
+			return;
+		}
+		//find the matching user in the database to get the most updated version
+		User.findOne( { facebookId: req.user.facebookId }, function(err, user) {
+			if (err) console.log(err);
+			//if we lost the user somehow render without user
+			if (!user) {
+				res.render('post', {
+					post: post
+				});
+				return;
+				//finally render with the user
+			} else res.render('post', {
+				post: post,
+				user: user
+			});
+		});
+	});
+});
+
+app.get('/pending', function(req, res) {
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
+	if (!req.user.group == 'admin') {
+		res.redirect('/');
+		return;
+	}
+	Pending.find().sort({'appDate': 1}).exec(function(err, pending) {
+		if (err) console.log(err);
+		res.render('pending', {
+			title: 'Pending Appointments',
+			pending: pending,
 			user: req.user
+		});
+	});
+});
+
+app.post('/approve', function(req, res) {
+	backURL=req.header('Referer') || '/';
+	var newSlug = new Date().getTime();
+	Pending.findOne({ slug: req.body.pass_slug }, function(err, pending) {
+		if (!pending) {
+			res.redirect('/');
+			return;
+		}
+		var booking = new Book({
+			appDate: pending.appDate,
+			appTime: pending.appTime,
+			name: pending.name,
+			facebookId: pending.facebookId,
+			email: pending.email,
+			phoneNumber: pending.phoneNumber,
+			comments: pending.comments,
+			slug: newSlug
+		});
+
+		booking.save(function(err) {
+			if (err) console.log(err);
+			else res.redirect(backURL);
+		});
+
+		Pending.remove({ slug: req.body.pass_slug }, function(err, post) {
+			if (err) console.log(err);
 		});
 	});
 });

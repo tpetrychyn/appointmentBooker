@@ -9,19 +9,23 @@ block content
 		= post.comments
 	if (user)
 		form(method="post", action="/book")
-			p
-				t Name:
-					input(type="text", name="user_name", readonly value="#{user.name}")
-			p
-				t Phone Number:
-				input(type="text", name="phone_number", readonly value="#{user.phoneNumber}")
-			p
-				t Email Address:
-				input(type="text", size="40", name="email_address", readonly value="#{user.email}")
+			//
+				p
+					t Name:
+						input(type="hidden", name="user_name", readonly value="#{user.name}")
+				p
+					t Phone Number:
+					input(type="hidden", name="phone_number", readonly value="#{user.phoneNumber}")
+				p
+					t Email Address:
+					input(type="hidden", size="40", name="email_address", readonly value="#{user.email}")
 			p
 				input(type="submit", value="Book this Appointment")
 				input(type="hidden", value="#{post.slug}" name="pass_slug")
 				input(type="hidden", value="#{user.facebookId}" name="pass_id")
+				input(type="hidden", name="user_name", readonly value="#{user.name}")
+				input(type="hidden", name="phone_number", readonly value="#{user.phoneNumber}")
+				input(type="hidden", size="40", name="email_address", readonly value="#{user.email}")
 	else
 		p Please
 			a(href="/auth/facebook") Login with Facebook

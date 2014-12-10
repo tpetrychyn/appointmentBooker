@@ -4,12 +4,21 @@ html
 		link(rel='stylesheet', href='/css/bootstrap.min.css')
 	body
 		if user
-			p
-				img(src="#{user.picture}" height="60px")
+			t &nbsp
+			a(href="/") Book an appointment
+			if (user.group == 'admin')
 				t &nbsp
-				a(href="/account") #{user.name}
+				a(href="/new") Create new opening
 				t &nbsp
-				a(href="/logout") Logout
+				a(href="/pending") View Pending
+				t &nbsp
+				a(href="/bookings") View all bookings
+
+			img(src="#{user.picture}" height="60px")
+			t &nbsp
+			a(href="/account") #{user.name}
+			t &nbsp
+			a(href="/logout") Logout
 		else
 			a(href="/auth/facebook") Login with Facebook
 		block content

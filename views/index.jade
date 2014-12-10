@@ -7,13 +7,13 @@ block content
 	div#containter
 		h1= title
 		p Welcome to Taylor's Haircut place
-		
+
 		<br>
 		if (posts == 0)
 			h2 There are currently no available appointments
 		each post in posts
-			h3 
-				a(href="/#{post.slug}") #{post.appDate}
+			h3
+				a(href="/posts/#{post.slug}") #{post.appDate}
 			h4= post.appTime
 			h= post.comments
 			<hr>

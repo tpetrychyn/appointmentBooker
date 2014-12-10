@@ -26,4 +26,10 @@ block content
 		h2= app.appDate
 		h3= app.appTime
 		h4= app.comments
+
+		form(method="post", action="/cancel")
+			p
+				input(type="submit", value="Cancel Appointment")
+				input(type="hidden", name="keep_box" value="true")
+				input(type="hidden", value="#{app.slug}" name="pass_slug")
 		<hr>
