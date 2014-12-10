@@ -4,10 +4,8 @@ var express = require('express')
 	, bodyParser = require('body-parser') //getting elements from jade
 	, jade = require('jade')
 	, cookieParser = require("cookie-parser")
-	, session = require('express-session');
-
-var FACEBOOK_APP_ID = "292262254317747"
-var FACEBOOK_APP_SECRET = "ef84a0371315a048c7314e7573cae69f";
+	, session = require('express-session')
+	, authConfig = require('./oauth.js');
 
 //connect to database
 var Post = require('./models/post');
@@ -39,9 +37,9 @@ passport.deserializeUser(function(obj, done) {
 //   credentials (in this case, an accessToken, refreshToken, and Facebook
 //   profile), and invoke a callback with a user object.
 passport.use(new FacebookStrategy({
-    clientID: FACEBOOK_APP_ID,
-    clientSecret: FACEBOOK_APP_SECRET,
-    callbackURL: "http://localhost:5000/auth/facebook/callback",
+    clientID: authConfig.facebook.clientID,
+    clientSecret: authConfig.facebook.clientSecret,
+    callbackURL: authConfig.facebook.callbackURL,
     enableProof: false
   },
   function(accessToken, refreshToken, profile, done) {
@@ -58,7 +56,6 @@ passport.use(new FacebookStrategy({
     				name: profile.displayName,
     				picture: "https://graph.facebook.com/" + profile.id + "/picture" + "?width=200&height=200" + "&access_token=" + accessToken,
     				group: 'user'
-    			
     			});
     		} else {
     			//This should update users names if they change it on FB, can't really test
@@ -73,8 +70,10 @@ passport.use(new FacebookStrategy({
     				if (err) console.log(err);
     			});
     		}
-    		//return the users info
-    		return done(err, submission);
+    		//I think nextTick is so we don't return before we've saved
+    		process.nextTick(function() {
+    			return done(err, submission);
+    		});
     	});
   	}
 ));
@@ -94,6 +93,7 @@ app.use(session({ secret: 'generate a random secret eventually' }));
 app.use(passport.initialize());
 app.use(passport.session());
 
+//Possible support for a full calendar, probably impossible
 /*var monthName = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]; //Array to hold month names
 var monthLength = [31,28,31,30,31,30,31,31,30,31,30,31]; //Array to hold number of days in each month
 var year = 2014;
@@ -121,7 +121,7 @@ for (var i = 0; i < 12; i++) {
 };*/
 
 app.get('/', function(req, res) {
-  	Post.find(function(err, posts) {
+  	Post.find().sort({'appDateTime': 1}).exec(function(err, posts) {
 		if (err) console.log(err);
 		res.render('index', {
 		title: 'Available Appointments',
@@ -142,12 +142,6 @@ app.get('/login', function(request, response){
 //   redirect the user back to this application at /auth/facebook/callback
 app.get('/auth/facebook',
   passport.authenticate('facebook', { display: 'touch' }));
-/*app.get('/auth/facebook',
-  passport.authenticate('facebook') { display : 'touch' },
-  function(request, response){
-    // The request will be redirected to Facebook for authentication, so this
-    // function will not be called.
-});*/
 
 // GET /auth/facebook/callback
 //   Use passport.authenticate() as route middleware to authenticate the
@@ -157,10 +151,11 @@ app.get('/auth/facebook',
 app.get('/auth/facebook/callback', 
   passport.authenticate('facebook', { failureRedirect: '/login' }),
   function(req, res) {
+  	backURL=req.header('Referer') || '/';
   	if (!req.user.phoneNumber)
   		res.redirect('/account');
   	else
-    	res.redirect('/');
+    	res.redirect(backURL);
 });
 
 app.get('/account', function(req, res){
@@ -196,154 +191,115 @@ app.get('/logout', function(req, res){
   res.redirect('/');
 });
 
-app.get('/bookings', function(request, response) {
+app.get('/bookings', function(req, res) {
   	Book.find(function(err, bookings) {
 		if (err) console.log(err);
-		response.render('bookings', {
+		res.render('bookings', {
 		title: 'Current Appointments',
 		bookings: bookings,
 		user: req.user
 		});
-	});
+	}, {"sort": "dec"});
 });
 
-app.get('/new', function(request, response) {
-	response.render('new', {
+app.get('/new', function(req, res) {
+	res.render('new', {
 		title: 'Add Appointment Time',
 		user: req.user
 	});
 });
 
-app.post('/new', function(request, response) {
+app.post('/new', function(req, res) {
 	var newSlug = new Date().getTime();
 	var post = new Post({
-		appDateTime: request.body.app_date,
-		comments: request.body.comments,
+		appDate: req.body.app_date,
+		appTime: req.body.app_time,
+		comments: req.body.comments,
 		slug: newSlug
 	});
 
 	post.save(function(err) {
 		if (err) console.log(err);
-		else response.redirect('/');
+		else res.redirect('/');
 	});
 });
 
-app.get('/oops', function(request, response) {
-	response.send('Oops something went wrong, press back and try again.');
+app.post('/cancel', function(req, res) {
+	var newSlug = new Date().getTime();
+	if (req.body.keep_box) {
+		Book.findOne({ slug: req.body.pass_slug }, function(err, booking) {
+			if (err) console.log(err);
+			if (!booking) {
+				res.redirect('/oops');
+				return;
+			}
+			var post = new Post({
+				appDate: booking.appDate,
+				appTime: booking.appTime,
+				comments: booking.comments,
+				slug: newSlug
+			});
+
+			post.save(function(err) {
+				if (err) console.log(err);
+			});
+		});
+	}
+	Book.remove({ slug: req.body.pass_slug }, function(err, booking) {
+		if (err) console.log(err);
+		if (!booking) {
+			res.redirect('/oops');
+			return;
+		}
+	});
+	res.redirect('/');	
 });
 
-app.post('/book', function(request, response) {
+app.get('/oops', function(req, res) {
+	res.send('Oops something went wrong, press back and try again.');
+});
+
+app.post('/book', function(req, res) {
 	var newSlug = new Date().getTime();
-	Post.findOne({ slug: request.body.pass_slug }, function(err, post) {
+	Post.findOne({ slug: req.body.pass_slug }, function(err, post) {
 		if (!post) {
-			response.redirect('/oops');
+			res.redirect('/oops');
 			return;
 		}
 		var booking = new Book({
-			appDateTime: post.appDateTime,
-			name: request.body.user_name,
-			email_address: request.body.email_address,
-			phone_number: request.body.phone_number,
+			appDate: post.appDate,
+			appTime: post.appTime,
+			name: req.body.user_name,
+			email_address: req.body.email_address,
+			phone_number: req.body.phone_number,
 			comments: post.comments,
 			slug: newSlug,
 		});
 
 		booking.save(function(err) {
 			if (err) console.log(err);
-			else response.redirect('/');
+			else res.redirect('/');
 		});
 
-		Post.remove({ slug: request.body.pass_slug }, function(err, post) {
+		Post.remove({ slug: req.body.pass_slug }, function(err, post) {
 			if (err) console.log(err);
 		});
 	});
 });
 
-app.post('/cancel', function(request, response) {
-	var newSlug = new Date().getTime();
-	if (request.body.keep_box) {
-		Book.findOne({ slug: request.body.pass_slug }, function(err, booking) {
-			if (err) console.log(err);
-			if (!booking) {
-				response.redirect('/oops');
-				return;
-			}
-				var post = new Post({
-					appDateTime: booking.appDateTime,
-					comments: booking.comments,
-					slug: newSlug
-				});
-
-				post.save(function(err) {
-					if (err) console.log(err);
-				});
-		});
-	}
-	Book.remove({ slug: request.body.pass_slug }, function(err, booking) {
-		if (!booking) {
-			response.redirect('/oops');
-			return;
-		}
-			if (err) console.log(err);
-	});
-	response.redirect('/');	
-});
-
-app.get('/:slug', function(request, response) {
-	Post.findOne({ slug: request.params.slug }, function(err, post) {
+app.get('/:slug', function(req, res) {
+	Post.findOne({ slug: req.params.slug }, function(err, post) {
 		if (!post) {
-			response.redirect('/oops');
+			res.redirect('/oops');
 			return;
 		}
 		if(err) console.log(err);
-		else response.render('post', {
+		else res.render('post', {
 			post: post,
-			user: request.user
+			user: req.user
 		});
 	});
 });
-
-
-
-
-/*app.get('/', function(request, response) {
-  	Post.find(function(err, posts) {
-		if (err) console.log(err);
-		response.render('index', {
-		title: 'welcome world',
-		posts: posts
-		});
-	});
-});
-
-app.get('/new', function(request, response) {
-	response.render('new', {
-		title: 'Add new post'
-	});
-});
-app.post('/new', function(request, response) {
-	var post = new Post({
-		title: request.body.post_title,
-		body: request.body.post_body,
-		slug: request.body.post_slug
-	});
-
-	post.save(function(err) {
-		if (err) console.log(err);
-		else response.redirect('/');
-	});
-});
-
-app.get('/:slug', function(request, response) {
-	Post.findOne({ slug: request.params.slug }, function(err, post) {
-		if(err) console.log(err);
-		else
-		response.render('post', {
-			title: post.title, 
-			post: post
-		});
-	});
-});*/
 
 app.listen(app.get('port'), function() {
   console.log("Node app is running at localhost:" + app.get('port'));

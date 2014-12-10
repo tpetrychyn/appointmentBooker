@@ -2,7 +2,11 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var postSchema = Schema({
-	appDateTime: {
+	appDate: {
+		type: String,
+		required: true
+	},
+	appTime: {
 		type: String,
 		required: true
 	},

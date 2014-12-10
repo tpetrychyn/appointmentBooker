@@ -6,11 +6,14 @@ head
 block content
 	div#containter
 		h1= title
-		p Welcome to Taylor's fun app
+		p Welcome to Taylor's Haircut place
 		
-
-		h3 Available bookings
+		<br>
+		if (posts == 0)
+			h2 There are currently no available appointments
 		each post in posts
-			a(href="/#{post.slug}") #{post.appDateTime}
-			h5= post.comments
+			h3 
+				a(href="/#{post.slug}") #{post.appDate}
+			h4= post.appTime
+			h= post.comments
 			<hr>

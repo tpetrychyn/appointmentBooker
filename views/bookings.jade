@@ -1,6 +1,8 @@
 extends layout
 
 block content
+	if (app == 0)
+	h2 There are currently no bookings
 	each app in bookings
 		h2= app.appDateTime
 		h3= app.name
