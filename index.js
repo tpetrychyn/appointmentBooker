@@ -12,7 +12,7 @@ var Post = require('./models/post');
 var Book = require('./models/bookings');
 var User = require('./models/users');
 var mongoose = require('mongoose');
-var dbURL = 'mongodb://heroku_app32339500:heroku_app32339500@ds061370.mongolab.com:61370/heroku_app32339500';
+var dbURL = 'mongodb://taylorp:taytay@ds061370.mongolab.com:61370/heroku_app32339500';
 
 mongoose.connect(dbURL);
 
