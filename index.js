@@ -12,7 +12,7 @@ var Post = require('./models/post');
 var Book = require('./models/bookings');
 var User = require('./models/users');
 var mongoose = require('mongoose');
-var dbURL = 'mongodb://localhost/appointmentsdb';
+var dbURL = 'mongodb://heroku_app32339500:heroku_app32339500@ds061370.mongolab.com:61370/heroku_app32339500';
 
 mongoose.connect(dbURL);
 
@@ -93,35 +93,8 @@ app.use(session({ secret: 'generate a random secret eventually' }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-//Possible support for a full calendar, probably impossible
-/*var monthName = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]; //Array to hold month names
-var monthLength = [31,28,31,30,31,30,31,31,30,31,30,31]; //Array to hold number of days in each month
-var year = 2014;
-var day = 6;
-
-var output = "";
-
-for (var i = 0; i < 12; i++) {
-	output += monthName[i] + '<br>';
-	output += "Sun&nbsp&nbspMon&nbsp&nbspTue&nbsp&nbspWed&nbsp&nbspThu&nbsp&nbspFri&nbsp&nbspSat <br>";
-	for (var z=0;z<day*9;z++)
-		output += '&nbsp';
-	for (var x=1;x<=monthLength[i];x++) {
-		if (x<10)
-			output += '&nbsp&nbsp' + x + '&nbsp&nbsp&nbsp&nbsp&nbsp';
-		else
-			output += x + '&nbsp&nbsp&nbsp&nbsp&nbsp';
-		day++;
-		if (day===7) {
-			output += '<br>';
-			day = 0;
-		}
-	};
-	output += '<br><br>';
-};*/
-
 app.get('/', function(req, res) {
-  	Post.find().sort({'appDateTime': 1}).exec(function(err, posts) {
+  	Post.find().sort({'appDate': 1}).exec(function(err, posts) {
 		if (err) console.log(err);
 		res.render('index', {
 		title: 'Available Appointments',
@@ -148,7 +121,7 @@ app.get('/auth/facebook',
 //   request.  If authentication fails, the user will be redirected back to the
 //   login page.  Otherwise, the primary route function function will be called,
 //   which, in this example, will redirect the user to the home page.
-app.get('/auth/facebook/callback', 
+app.get('/auth/facebook/callback',
   passport.authenticate('facebook', { failureRedirect: '/login' }),
   function(req, res) {
   	backURL=req.header('Referer') || '/';
@@ -159,30 +132,50 @@ app.get('/auth/facebook/callback',
 });
 
 app.get('/account', function(req, res){
-	if (req.user)
-		res.render('account', {
-		title: 'Account Settings',
-		user: req.user
+	//Grab user from database, not needed on every page since it can be stored in session for quicker access
+	if (!req.user) {
+		res.redirect('/');
+		return;
+	}
+	User.findOne( { facebookId: req.user.facebookId }, function(err, user) {
+		if (err) {
+			console.log(err);
+			res.redirect('/');
+			return;
+		}
+		Book.find( { facebookId: req.user.facebookId }, function(err, bookings) {
+			if (err) console.log(err);
+			res.render('account', {
+				title: 'Account Settings',
+				user: user,
+				bookings: bookings
+			});
 		});
-	else
-  		res.redirect('/');
+	});
 });
 
 app.post('/account', function(req, res) {
-	console.log(req.body.pass_id);
 	User.findOne( { facebookId: req.body.pass_id }, function(err, user) {
 		if (err) console.log(err);
 		if (!user) {
 			res.redirect('/oops');
 			return;
 		}
-			user.phoneNumber = req.body.phone_number;
-			user.email = req.body.email_address;
 
-			user.save(function(err) {
-				if (err) console.log(err);
-				else res.redirect('/');
-			});
+		if (validatePhone(req.body.phone_number))
+			user.phoneNumber = req.body.phone_number;
+		else
+			console.log('invalid phone number - do something with this soon');
+
+		if (validateEmail(req.body.email_address))
+			user.email = req.body.email_address;
+		else
+			console.log('invalid email');
+
+		user.save(function(err) {
+			if (err) console.log(err);
+			else res.redirect('/');
+		});
 	});
 });
 
@@ -192,7 +185,15 @@ app.get('/logout', function(req, res){
 });
 
 app.get('/bookings', function(req, res) {
-  	Book.find(function(err, bookings) {
+	if (!req.user){
+		res.redirect('/');
+		return;
+	}
+	if (!req.user.group == 'admin') {
+		res.redirect('/');
+		return;
+	}
+  	Book.find().sort({'appDate': 1}).exec(function(err, bookings) {
 		if (err) console.log(err);
 		res.render('bookings', {
 		title: 'Current Appointments',
@@ -252,7 +253,7 @@ app.post('/cancel', function(req, res) {
 			return;
 		}
 	});
-	res.redirect('/');	
+	res.redirect('/');
 });
 
 app.get('/oops', function(req, res) {
@@ -266,10 +267,19 @@ app.post('/book', function(req, res) {
 			res.redirect('/oops');
 			return;
 		}
+		if (!validateEmail(req.body.email_address)) {
+			res.redirect('/oops');
+			return;
+		}
+		if (!validatePhone(req.body.phone_number)) {
+			res.redirect('/oops');
+			return;
+		}
 		var booking = new Book({
 			appDate: post.appDate,
 			appTime: post.appTime,
 			name: req.body.user_name,
+			facebookId: req.body.pass_id,
 			email_address: req.body.email_address,
 			phone_number: req.body.phone_number,
 			comments: post.comments,
@@ -305,9 +315,18 @@ app.listen(app.get('port'), function() {
   console.log("Node app is running at localhost:" + app.get('port'));
 });
 
+function validateEmail(email) {
+	var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+	return re.test(email);
+}
+
+function validatePhone(phone) {
+	var re = /^[(]{0,1}[0-9]{3}[)]{0,1}[-\s\.]{0,1}[0-9]{3}[-\s\.]{0,1}[0-9]{4}$/;
+	return re.test(phone);
+
+}
+
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { return next(); }
   res.redirect('/login')
 }
-
-

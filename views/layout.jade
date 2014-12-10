@@ -5,8 +5,10 @@ html
 	body
 		if user
 			p
-				img(src="#{user.picture}" height="60px") 
-				t &nbsp #{user.name} &nbsp
+				img(src="#{user.picture}" height="60px")
+				t &nbsp
+				a(href="/account") #{user.name}
+				t &nbsp
 				a(href="/logout") Logout
 		else
 			a(href="/auth/facebook") Login with Facebook

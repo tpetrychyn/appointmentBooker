@@ -1,10 +1,11 @@
 extends layout
 
 block content
-	if (app == 0)
-	h2 There are currently no bookings
+	if (bookings == 0)
+		h2 There are currently no bookings
 	each app in bookings
-		h2= app.appDateTime
+		h2= app.appDate
+		h2= app.appTime
 		h3= app.name
 		h4= app.phone_number
 		h4= app.email_address

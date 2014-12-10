@@ -3,13 +3,27 @@ extends layout
 block content
 	h1 #{user.name} Settings
 
+	if (user.group=='admin')
+		p
+			a(href="/bookings") See all appointments
+		p
+			a(href="/new") Add new appointments
+
 	form(method="post", action="/account")
 		p
-			t Phone Number: 
-			input(type="text", name="phone_number", placeholder="Enter your phone number")
+			t Phone Number:
+			input(type="text", name="phone_number", placeholder="#{user.phoneNumber}")
 		p
-			t Email Address: 
-			input(type="text", size="40", name="email_address", placeholder="Enter your email address")
+			t Email Address:
+			input(type="text", size="40", name="email_address", placeholder="#{user.email}")
 		p
-			input(type="submit", value="Update Account")
+			input(type="submit", value="Update Settings")
 			input(type="hidden", value="#{user.facebookId}" name="pass_id")
+
+	h2 Your upcoming appointments
+	<hr>
+	each app in bookings
+		h2= app.appDate
+		h3= app.appTime
+		h4= app.comments
+		<hr>

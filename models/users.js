@@ -20,7 +20,7 @@ var userSchema = Schema({
 		required: true
 	},
 	phoneNumber: {
-		type: String,
+		type: String
 	},
 	email: {
 		type: String
