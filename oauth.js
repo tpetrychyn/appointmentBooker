@@ -2,7 +2,7 @@ var ids = {
 	facebook: {
 	 clientID: '292262254317747', //App ID
 	 clientSecret: 'ef84a0371315a048c7314e7573cae69f',
-	 callbackURL: 'http://localhost:5000/auth/facebook/callback'
+	 callbackURL: 'https://sheltered-dawn-1284.herokuapp.com/auth/facebook/callback'
 	}/*
 	twitter: {
 	 consumerKey: 'get_your_own',
