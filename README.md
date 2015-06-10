@@ -1,3 +1,6 @@
+Web app created in NodeJS and Jade with a MongoDB database to create and book appointments. Using the Facebook API to handle user accounts.
+
+
 # node-js-getting-started
 
 A barebones Node.js app using [Express 4](http://expressjs.com/).
